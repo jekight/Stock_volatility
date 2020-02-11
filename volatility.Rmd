@@ -1,0 +1,198 @@
+---
+title: "Financial Sector Volatility"
+author: "Jeremy Kight"
+date: "2/9/2020"
+output:
+  html_document
+---
+***
+# Abstract
+
+The objective of this report is to determine which of the 11 financial sectors within the New York Stock Exchange (NYSE) was the most volatile over the past year (02/07/2019 to 02/07/2020). Based on the data obtained through Yahoo Finance, it appears that the Finance sector was the most volatile, followed by the Energy sector. Upon further investigation, however, several companies were inaccurately skewing the results in these sectors due to missing data, name changes, or extreme stock price fluctuation. After removing the outlier companies, it was found that the Capital Goods sector was the most volatile. Lastly, the results were compared to how the sectors within the S&P 500 behaved over the last year. In the S&P 500, it was found that the Finance sector experienced the greatest volatility, followed by the Energy sector. Overall, the sectors within the S&P 500 were more volatile than the sectors that included the entire NYSE (New York Stock Exchange). 
+
+# Introduction
+
+Volatility is a primary factor used in determining how to invest in different securities. According to [Investipedia](https://www.investopedia.com/terms/v/volatility.asp), volatility is defined as a statistical measure of the dispersion of returns for a given security or market index. The higher the volatility, the riskier the security. When a security experiences high volatility, the stock price is changing drastically (in either direction) relative to the security's average stock price. While this could result in large gains, it could also result in significant losses. Thus, depending on an individual's goals and time frame, the volatility measurement must be considered when building a financial portfolio. 
+
+When determining the volatility of a security, there are several measures to consider. For the analysis performed in this report, variance and standard deviation were utilized to describe volatility. The variance and standard deviation describe how far away the data points are from the mean of a dataset, with the standard deviation being the volatility. This is one of the most popular ways to determine a stock's volatility because it is relatively easy to calculate and understand. There are, however, drawbacks to using standard deviation to determine the volatility. First, the returns distribution may not be randomly distributed, resulting in an asymmetric profile (meaning, the data is skewed). In order for standard deviation to be an accurate measure of risk, the investment performance data must be normally distributed. Because stock prices typically fluctuate up and down, many investors are comfortable with concluding that price data resembles a random distribution. Another popular measure of volatility is the relative volatility of a stock to the market, otherwise known as a stock's beta ($\beta$). A beta approximates the overall volatility of a security's returns against the returns of a relevant benchmark (like the S&P 500). This is a good measure only if the end-goal is to determine if a stock is out-performing the S&P 500 (typically the S&P 500 is the gold standard for comparison). An additional technique is to examine a security's volatility through the VIX, or Volatility Index. The VIX is a gauge of the future bets investors and traders are making on the direction of the markets or individual securities.
+
+Lastly, there are two main types of volatility: implied and historical. Implied volatility is the projected, or future, volatility of a stock. This calculation is important, but should be considered with caution because predicting future stock prices is not an exact science. Historical volatility, on the other hand, takes a security's price change over a period of time and analyzes it. While it does not predict how volatile a stock will be in the future, understanding why changes in volatility occurred and when the changes took place could help in future decision-making.
+
+# Analysis
+
+The established timeframe for data collection and analysis was from February 7th, 2019 through February 7th, 2020. The stock exchange in focus was the New York Stock Exchange (NYSE), which is the largest stock exchange in the world. 3094 companies in 11 different sectors was analyzed; the data was retrieved from Yahoo Finance and compiled into a dataframe summarizing 624350 observations with 14 variables, as seen in the snippet below. Notice there are several companies with no sector listed. In these cases, companies without a sector were placed in a new sector called "Miscellaneous".
+
+``` {r include = FALSE}
+library(tidyverse)
+library(tidyquant)
+library(ggplot2)
+library(knitr)
+```
+
+``` {r echo=FALSE, warning=FALSE, message=FALSE, results = 'asis'}
+stocks_data <- read_csv("stocks_data.csv")
+stocks_data$sector <- fct_explicit_na(stocks_data$sector)
+stocks_data$sector[stocks_data$sector == "(Missing)"] <- "Miscellaneous"
+kable(stocks_data[1:5, ])
+```
+<br>
+
+In order to calculate volatility, the average return for each stock during each time period was determined. The average return is how much the price of the stock moves up or down during a set time period. In this case, the daily returns for each stock were calculated using the adjusted close price correlated to each stock.
+
+``` {r echo=FALSE, warning=FALSE, message=FALSE}
+#Convert each assets raw adjusted closing price to returns
+daily_returns = stocks_data %>%
+  group_by(company, symbol, sector) %>%
+  tq_transmute(select = adjusted,
+               mutate_fun = periodReturn,
+               period = "daily") %>%
+  ungroup() 
+kable(daily_returns[1:5, ])
+```
+<br>
+
+After calculating daily returns, the stocks were grouped together based on their respective sector. Once grouped, the average volatility for each sector was calculated for each day in the past year. Below is a table showing the 10 days where the average volatility was the highest among the different sectors.
+
+``` {r echo=FALSE, warning=FALSE, message=FALSE}
+#Compute Avgerage Returns Then Volatility
+sector_daily_returns <- daily_returns %>%
+  group_by(date, sector) %>%
+  summarise(avg_volatility = sd(daily.returns))
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+vol_day <- sector_daily_returns %>%
+  arrange(desc(avg_volatility))
+kable(vol_day[1:10, ])
+```
+
+<br>
+The data in the table above is critical information because each date can be researched further to determine what caused the volatility to increase so drastically. Before examining specific days, however, the average monthly volatility was found to investigate the magnitude of impact the most volatile days had on monthly averages.
+
+``` {r echo=FALSE, warning=FALSE, message=FALSE}
+monthly_returns = stocks_data %>%
+  group_by(company, symbol, sector) %>%
+  tq_transmute(select = adjusted,
+               mutate_fun = periodReturn,
+               period = "monthly") %>%
+  ungroup()
+```
+
+``` {r echo=FALSE, warning=FALSE, message=FALSE}
+#Compute monthly Returns Then Volatility
+sector_monthly_returns <- monthly_returns %>%
+  group_by(date, sector) %>%
+  summarise(avg_volatility = sd(monthly.returns))
+```
+
+``` {r echo=FALSE, warning=FALSE, message=FALSE}
+sector_monthly_returns$sector <-   as.factor(sector_monthly_returns$sector)
+
+vol_month <- sector_monthly_returns %>%
+  arrange(desc(avg_volatility))
+kable(vol_month[1:10, ])
+```
+<br>
+
+As shown in the table above, the high-volatile days do not have a sizable impact on the monthly return averages. The Miscellaneous sector (created for companies without a listed sector), however, experienced extreme volatility. Because this sector is comprised of companies with unlabeled sectors, the data may be skewed by missing values. Before analytically addressing the Miscellaneous sector, the average yearly volatility was calculated and the sectors were ranked from greatest to least volatile. 
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+#Average Volatility Year
+year_avg = daily_returns %>%
+  group_by(sector) %>%
+  summarise(avg_volatility = sd(daily.returns)) %>%
+  arrange(desc(avg_volatility))
+kable(year_avg[1:12, ])
+```
+<br>
+
+According to the results above, the Energy sector was the most volatile, followed by Finance and Miscellaneous. To better understand why those three sectors were the highest, a plot comparing average returns vs. average volatility was created. The plot exposes which companies have the greatest impact on volatility in these sectors. 
+
+```{r echo = FALSE, include=TRUE, results="hide", fig.width=8, fig.height=6, warning=FALSE, message=FALSE}
+daily_returns %>%
+  group_by(symbol, company, sector) %>%
+  summarise(avg_return = round(mean(daily.returns), 4),
+            avg_volatility = sd(daily.returns), na.rm = TRUE) %>%
+  ggplot(aes(avg_return, avg_volatility))+
+  geom_text(aes(label = symbol), size = 3)+
+  labs(title = "Average Return vs Volatility Over Last Year",
+       x = "Average Return", y = "Average Volatility")+
+  theme_minimal()
+```
+<br>
+
+The plot above shows that several companies are much more volatile than the rest. Such high volatility could be the result of company name changes, large periods of missing data, or the unstable stock price of new companies in the market.
+
+Upon further research, Federated Hermes, Inc. (FHI) was identified as a new stock market ticker resulting from a merger between Federated Investors, Inc and Hermes Investment Management. A deeper look at the Yahoo Finance data concerning FHI revealed many empty data points, and, therefore, too little information for an accurate volatility measurement. In addition to limited data, the price of an individual stock dropped from over 900 dollars a share to 30 dollars a share, resulting in an inflated volatility result. Thus, the FHI ticker symbol was removed from consideration. 
+The Angel Oak Final Strategies Income Term Trust (FINS) was another outlier company for several reasons. The company entered the stock market in late May of 2019, however, the data from Yahoo Finance shows it had been trading at about 50 cents per stock prior to May. After May, the company began trading at about $20.00 per stock. This big price jump is what caused the volatility measurements to be so high. Also, FINS had an unidentified sector in the Yahoo Finance data, thus is was placed in the Miscellaneous sector. This explains why the Miscellaneous sector had one of the highest volatilities.
+Lastly, NexTier Oilfield Solutions Inc. (NEX) experience a steep drop in stock price in May of last year, which explains the high volatility measurement. Since this company is the result of a merger in October 2019, the inconsistences can most likely be attributed to its unclear history, resulting in inacurate Yahoo Finance data. Because these three companies experienced abnormal changes in stock price (based upon what was supplied by Yahoo Finance), all three were removed from the dataset.
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+daily_returns_adj <- daily_returns %>%
+  filter(symbol != "FHI" & symbol != "FINS" & symbol != "NEX")
+
+sector_daily_returns_adj <- daily_returns_adj %>%
+  group_by(date, sector) %>%
+  summarise(avg_return = round(mean(daily.returns),4),
+            avg_volatility = sd(daily.returns), na.rm = TRUE)
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+year_avg_adj = daily_returns_adj %>%
+  group_by(sector) %>%
+  summarise(avg_volatility = sd(daily.returns)) %>%
+  arrange(desc(avg_volatility))
+
+kable(year_avg_adj[1:12, ])
+```
+<br>
+
+Without including the three extreme outliers in the dataset found earlier (FHI, FINS, NEX), the results were quite different, as seen above. Capital Goods was actually the sector that experienced the greatest volatility last year, followed by Finance, then Energy. The Miscellaneous sector dropped to the least volatile after being ranked third with the inclusion of outliers. Next, these results were compared to the volatility experienced by the sectors within the S&P 500, which is shown below.
+
+```{r include = FALSE}
+sp500_data <- read_csv("sp500_data.csv")
+sp500_data$sector <- fct_explicit_na(stocks_data$sector)
+sp500_data$sector[sp500_data$sector == "(Missing)"] <- "Miscellaneous"
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+sp500_daily_returns = sp500_data %>%
+  group_by(company, symbol, sector) %>%
+  tq_transmute(select = adjusted,
+               mutate_fun = periodReturn,
+               period = "daily") %>%
+  ungroup()  
+```
+
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+sp500_year_avg = sp500_daily_returns %>%
+  group_by(sector) %>%
+  summarise(avg_volatility = sd(daily.returns)) %>%
+  arrange(desc(avg_volatility))
+
+kable(sp500_year_avg[1:12, ])
+```
+<br>
+
+The comparison results were expected, considering Energy, Finance, and Capital Goods are still at the top. Notice that the average volatility, specifically within the S&P 500, is slightly higher than seen in the entire NYSE. Also, the Miscellaneous sector demonstrated a higher volatility. This could be attributed to Yahoo Finance not updating stock information when mergers or new company additions occur. 
+
+
+# Conclusion
+
+Overall, Capital Goods, Energy, and Finance were the most volatile sectors over the past year. This was consistent in both the NYSE as a whole and the S&P 500, although the company order did not exactly match. While this type of analysis is advantageous for gaining insight into volatility, it should be approached with caution. As demonstrated in the report, outliers can have a major impact on calculations and results. Each outlier must be carefully researched prior to discarding because each company still contributes to the stock market. One potential way to expand on this report would be investigating the presence of any repeating months that experience the highest volatility over several years. If there is a pattern, traders could strategically time their stock purchases based upon the probability of stock price fluctuation for a given time of year. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
