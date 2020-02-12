@@ -3,10 +3,8 @@ title: "Financial Sector Volatility"
 author: "By: Jeremy Kight"
 date: "Date: 2/9/2020"
 output:
-  html_document:
-    toc: true
-    toc_depth: 3
-    toc_float: yes
+  html_document
+
 ---
 ***
 # Abstract
@@ -50,7 +48,7 @@ daily_returns = stocks_data %>%
                mutate_fun = periodReturn,
                period = "daily") %>%
   ungroup() 
-kable(daily_returns[1:5, ])
+kable(daily_returns[1:5, ], align = "lllll")
 ```
 <br>
 
@@ -60,13 +58,13 @@ After calculating daily returns, the stocks were grouped together based on their
 #Compute Avgerage Returns Then Volatility
 sector_daily_returns <- daily_returns %>%
   group_by(date, sector) %>%
-  summarise(avg_volatility = sd(daily.returns))
+  summarise(volatility = round(sd(daily.returns),4))
 ```
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 vol_day <- sector_daily_returns %>%
-  arrange(desc(avg_volatility))
-kable(vol_day[1:10, ])
+  arrange(desc(volatility))
+kable(vol_day[1:10, ], align = "lll")
 ```
 
 <br>
@@ -85,15 +83,15 @@ monthly_returns = stocks_data %>%
 #Compute monthly Returns Then Volatility
 sector_monthly_returns <- monthly_returns %>%
   group_by(date, sector) %>%
-  summarise(avg_volatility = sd(monthly.returns))
+  summarise(volatility = round(sd(monthly.returns),4))
 ```
 
 ``` {r echo=FALSE, warning=FALSE, message=FALSE}
 sector_monthly_returns$sector <-   as.factor(sector_monthly_returns$sector)
 
 vol_month <- sector_monthly_returns %>%
-  arrange(desc(avg_volatility))
-kable(vol_month[1:10, ])
+  arrange(desc(volatility))
+kable(vol_month[1:10, ], align = "lll")
 ```
 <br>
 
@@ -103,9 +101,9 @@ As shown in the table above, the high-volatile days do not have a sizable impact
 #Average Volatility Year
 year_avg = daily_returns %>%
   group_by(sector) %>%
-  summarise(avg_volatility = sd(daily.returns)) %>%
-  arrange(desc(avg_volatility))
-kable(year_avg[1:12, ])
+  summarise(volatility = round(sd(daily.returns),4)) %>%
+  arrange(desc(volatility))
+kable(year_avg[1:12, ],align = "ll")
 ```
 <br>
 
@@ -114,9 +112,9 @@ According to the results above, the Energy sector was the most volatile, followe
 ```{r echo = FALSE, include=TRUE, results="hide", fig.width=8, fig.height=6, warning=FALSE, message=FALSE}
 daily_returns %>%
   group_by(symbol, company, sector) %>%
-  summarise(avg_return = round(mean(daily.returns), 4),
-            avg_volatility = sd(daily.returns), na.rm = TRUE) %>%
-  ggplot(aes(avg_return, avg_volatility))+
+  summarise(Return = round(mean(daily.returns), 4),
+            Volatility = sd(daily.returns), na.rm = TRUE) %>%
+  ggplot(aes(Return, Volatility))+
   geom_text(aes(label = symbol), size = 3)+
   labs(title = "Average Return vs Volatility Over Last Year",
        x = "Average Return", y = "Average Volatility")+
@@ -136,17 +134,17 @@ daily_returns_adj <- daily_returns %>%
 
 sector_daily_returns_adj <- daily_returns_adj %>%
   group_by(date, sector) %>%
-  summarise(avg_return = round(mean(daily.returns),4),
-            avg_volatility = sd(daily.returns), na.rm = TRUE)
+  summarise(Return = round(mean(daily.returns),4),
+            volatility = sd(daily.returns), na.rm = TRUE)
 ```
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 year_avg_adj = daily_returns_adj %>%
   group_by(sector) %>%
-  summarise(avg_volatility = sd(daily.returns)) %>%
-  arrange(desc(avg_volatility))
+  summarise(volatility = sd(daily.returns)) %>%
+  arrange(desc(volatility))
 
-kable(year_avg_adj[1:12, ])
+kable(year_avg_adj[1:12, ], align = "ll")
 ```
 <br>
 
@@ -171,10 +169,10 @@ sp500_daily_returns = sp500_data %>%
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 sp500_year_avg = sp500_daily_returns %>%
   group_by(sector) %>%
-  summarise(avg_volatility = sd(daily.returns)) %>%
-  arrange(desc(avg_volatility))
+  summarise(volatility = sd(daily.returns)) %>%
+  arrange(desc(volatility))
 
-kable(sp500_year_avg[1:12, ])
+kable(sp500_year_avg[1:12, ], align = "ll")
 ```
 <br>
 
