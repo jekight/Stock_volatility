@@ -1,9 +1,12 @@
 ---
 title: "Financial Sector Volatility"
-author: "Jeremy Kight"
-date: "2/9/2020"
+author: "By: Jeremy Kight"
+date: "Date: 2/9/2020"
 output:
-  html_document
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: yes
 ---
 ***
 # Abstract
